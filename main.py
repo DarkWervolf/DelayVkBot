@@ -7,6 +7,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 import vk_requests
 
 import re
+from multiprocessing import Process
 
 
 class delay:
@@ -551,6 +552,12 @@ keyboard_cancel = VkKeyboard(one_time=False)
 keyboard_cancel.add_button('Отмена')
 
 
+#listen_main()
+'''
+if __name__ == '__main__':
+    proc = Process(target=listen_main)
+    proc.start()
+'''
 listen_main()
 '''
 # start listening to messages
