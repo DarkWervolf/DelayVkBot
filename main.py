@@ -52,7 +52,7 @@ class database:
         with open(filename) as f:
             hw_all_str = f.readlines()
         for line in hw_all_str:
-            hw = homework(int(line[:2]), make_deadline(line[2:len(line)-3]), bool(int(line[len(line)-2])))
+            hw = homework(int(line[:2]), make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
             self.add(hw)
 
     def get_database(self):
@@ -74,6 +74,13 @@ class database:
             if h.num == n:
                 return h
         return False
+
+    def save(self, filename: str):
+        all = ''
+        for h in self.database:
+            all += h.get_str() + '\n'
+        with open(filename, 'w') as f:
+            f.write(all)
 
 
 def make_deadline(date: str):
@@ -262,6 +269,7 @@ def add_hw():
                     random_id=get_random_id()
                 )
                 database.print()
+                database.save("hw_all.txt")
                 return
 
 
@@ -276,6 +284,7 @@ def delete_hw():
                         message='Успех!',
                         random_id=get_random_id()
                     )
+                    database.save("hw_all.txt")
                     database.print()
                 else:
                     Lsvk.messages.send(
@@ -437,14 +446,12 @@ keyboard_fields.add_line()
 keyboard_fields.add_button('Отмена')
 
 
-listen_main()
-'''
 # start listening to messages
-try:
-    listen_main()
-except Exception as e:
-    print(e)
-    print("Произошла ошибка. Перезапуск программы...")
-    time.sleep(5)
-    listen_main()
-'''
+while True:
+    try:
+        listen_main()
+    except Exception as e:
+        print(e)
+        print("Произошла ошибка. Перезапуск программы...")
+        time.sleep(5)
+        listen_main()
