@@ -56,7 +56,10 @@ class database:
             self.add(hw)
 
     def get_database(self):
-        return self.database
+        all = []
+        for h in self.database:
+            all.append(str(h.num))
+        return all
 
     def get_active(self):
         active = []
@@ -207,7 +210,14 @@ def listen_delay():
                         user = api_requests.users.get(user_ids=event.user_id)
                         user_name = [user[0].get('first_name'), user[0].get('last_name')]
 
-                        print(datetime.datetime.now())
+                        if datetime.now() > database.get_by_num(int(event.text)).deadline:
+                            Lsvk.messages.send(
+                                user_id=event.user_id,
+                                message='А всё, а всё, а надо было раньше...\nПосле дедлайна отсрочку взять уже нельзя.',
+                                keyboard=keyboard_delay.get_keyboard(),
+                                random_id=get_random_id()
+                            )
+                            return
 
                         if availability_check(event.user_id, user_name, int(event.text)):
                             Lsvk.messages.send(
@@ -246,7 +256,7 @@ def listen_delay():
                     random_id=get_random_id()
                 )
                 return
-            else:
+            elif re.match("\\s\\.\\s",event.text):
                 Lsvk.messages.send(
                     user_id=event.user_id,
                     message='Некорректная команда. Попробуй ещё раз.',
@@ -258,7 +268,7 @@ def listen_delay():
 def add_hw():
     for event in Lslongpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text:
-            if re.match("\\s*\\d?\\d\\s[0-3]\\d.(0[1-9]|1[0-2]).\\d\\d\\s[0-1]\\s*", event.text):
+            if re.match("\\s*\\d?\\d\\s[0-3]\\d\\.(0[1-9]|1[0-2])\\.\\d\\d\\s[0-1]\\s*", event.text):
                 line = str.strip(event.text)
                 print(line)
                 hw = homework(int(line[:2]), make_deadline(str.strip(line[2:len(line)-2])), bool(int(line[len(line)-1])))
@@ -276,7 +286,7 @@ def add_hw():
 def delete_hw():
     for event in Lslongpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text:
-            if re.match("\\s*\\d\\d\\s*", event.text):
+            if re.match("\\s*\\d?\\d\\s*", event.text):
                 num = str.strip(event.text)
                 if database.delete_by_num(int(num)):
                     Lsvk.messages.send(
@@ -298,7 +308,7 @@ def delete_hw():
 def change_hw():
     for event in Lslongpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text:
-            if re.match("\\s*\\d\\d\\s*", event.text):
+            if re.match("\\s*\\d?\\d\\s*", event.text):
                 num = str.strip(event.text)
                 element = database.get_by_num(int(num))
                 if element:
@@ -446,6 +456,8 @@ keyboard_fields.add_line()
 keyboard_fields.add_button('Отмена')
 
 
+listen_main()
+'''
 # start listening to messages
 while True:
     try:
@@ -455,3 +467,4 @@ while True:
         print("Произошла ошибка. Перезапуск программы...")
         time.sleep(5)
         listen_main()
+'''
