@@ -1,6 +1,4 @@
-import time
 from datetime import datetime
-from typing import Type
 
 import vk_api
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -281,6 +279,14 @@ def add_hw():
                 database.print()
                 database.save("hw_all.txt")
                 return
+            elif event.text == 'Отмена':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_admin.get_keyboard(),
+                    message='Операция отменена',
+                    random_id=get_random_id()
+                )
+                return
 
 
 def delete_hw():
@@ -302,6 +308,14 @@ def delete_hw():
                         message='Дз не найдено',
                         random_id=get_random_id()
                     )
+                return
+            elif event.text == 'Отмена':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_admin.get_keyboard(),
+                    message='Операция отменена',
+                    random_id=get_random_id()
+                )
                 return
 
 
@@ -328,6 +342,70 @@ def change_hw():
                         random_id=get_random_id()
                     )
                 return
+            elif event.text == 'Отмена':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_admin.get_keyboard(),
+                    message='Операция отменена',
+                    random_id=get_random_id()
+                )
+                return
+
+
+def admin_add():
+    for event in Lslongpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text:
+            if re.match("\\s*\\d+\\s*", event.text):
+                admins_id.append(int(event.text))
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    message='Успех!',
+                    keyboard=keyboard_admin.get_keyboard(),
+                    random_id=get_random_id()
+                )
+                return
+            elif event.text == 'Отмена':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_admin.get_keyboard(),
+                    message='Операция отменена',
+                    random_id=get_random_id()
+                )
+                return
+            else:
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    message='Некорретное ID. Операция отменена',
+                    random_id=get_random_id()
+                )
+
+
+def admin_delete():
+    for event in Lslongpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text:
+            if re.match("\\s*\\d+\\s*", event.text) and int(event.text) in admins_id:
+                admins_id.remove(int(event.text))
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    message='Успех!',
+                    keyboard=keyboard_admin.get_keyboard(),
+                    random_id=get_random_id()
+                )
+                return
+            elif event.text == 'Отмена':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_admin.get_keyboard(),
+                    message='Операция отменена',
+                    random_id=get_random_id()
+                )
+                return
+            else:
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    message='Некорретное ID. Операция отменена',
+                    random_id=get_random_id()
+                )
 
 
 def listen_admin(last_event):
@@ -343,6 +421,7 @@ def listen_admin(last_event):
             if event.text == 'Добавить':
                 Lsvk.messages.send(
                     user_id=event.user_id,
+                    keyboard=keyboard_cancel.get_keyboard(),
                     message='Введите номер и дату дедлайна дз в формате:\nнн дд.мм.гг',
                     random_id=get_random_id()
                 )
@@ -350,6 +429,7 @@ def listen_admin(last_event):
             if event.text == 'Удалить':
                 Lsvk.messages.send(
                     user_id=event.user_id,
+                    keyboard=keyboard_cancel.get_keyboard(),
                     message='Введите номер дз в формате: нн',
                     random_id=get_random_id()
                 )
@@ -357,6 +437,7 @@ def listen_admin(last_event):
             if event.text == 'Изменить':
                 Lsvk.messages.send(
                     user_id=event.user_id,
+                    keyboard=keyboard_cancel.get_keyboard(),
                     message='Введите номер дз в формате: нн',
                     random_id=get_random_id()
                 )
@@ -380,6 +461,22 @@ def listen_admin(last_event):
                     message=all,
                     random_id=get_random_id()
                 )
+            if event.text == 'Добавить админа':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_cancel.get_keyboard(),
+                    message='Введите id нового админа в формате цифр',
+                    random_id=get_random_id()
+                )
+                admin_add()
+            if event.text == 'Удалить админа':
+                Lsvk.messages.send(
+                    user_id=event.user_id,
+                    keyboard=keyboard_cancel.get_keyboard(),
+                    message='Введите id админа на съедение в формате цифр',
+                    random_id=get_random_id()
+                )
+                admin_delete()
             if event.text == 'Выйти':
                 Lsvk.messages.send(
                     user_id=event.user_id,
@@ -405,7 +502,7 @@ hw_all = database.get_database()
 hw_available = database.get_active()
 
 # buttons in chat
-buttons_delay = ['Попросить отсрочку', 'Попросить другую отсрочку']
+buttons_delay = ['Попросить отсрочку']
 buttons_default = ['Справка', 'Завершить']
 
 # клавиатура с кнопкой отсрочки + стандартными
@@ -445,15 +542,13 @@ keyboard_admin.add_button('Изменить')
 keyboard_admin.add_line()
 keyboard_admin.add_button('Показать активные')
 keyboard_admin.add_button('Показать все')
+keyboard_admin.add_line()
+keyboard_admin.add_button('Добавить админа')
+keyboard_admin.add_button('Удалить админа')
 keyboard_admin.add_button('Выйти')
 
-#клавиатура полей
-keyboard_fields = VkKeyboard(one_time=False)
-keyboard_fields.add_button('Номер')
-keyboard_fields.add_button('Дедлайн')
-keyboard_fields.add_button('Активен')
-keyboard_fields.add_line()
-keyboard_fields.add_button('Отмена')
+keyboard_cancel = VkKeyboard(one_time=False)
+keyboard_cancel.add_button('Отмена')
 
 
 listen_main()
