@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import os
 import vk_api
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
@@ -61,13 +61,13 @@ class Bot:
         self.database_admin.add(self.god_id)
 
     def run(self, start_event):
-        if Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.hw_none:
+        if start_event.text == 'd27fh2fbskrbakq1r' and start_event.user_id in self.database_admin.get_database():
+            self._listen_admin_(start_event)
+
+        elif Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.hw_none:
             self._message_delay_()
             if self._listen_delay_() == 0:
                 return
-
-        elif start_event == 'd27fh2fbskrbakq1r' and start_event.user_id in self.database_admin.get_database():
-            self._listen_admin_(start_event)
 
         elif self.hw_none:
             self._message_nodelays_()
@@ -209,15 +209,6 @@ class Bot:
                             user = self.api_requests.users.get(user_ids=event.user_id)
                             user_name = [user[0].get('first_name'), user[0].get('last_name')]
 
-                            if datetime.now() > self.database_hw.get_by_num(int(event.text)).deadline:
-                                self.Lsvk.messages.send(
-                                    user_id=event.user_id,
-                                    message='А всё, а всё, а надо было раньше...\nПосле дедлайна отсрочку взять уже нельзя.',
-                                    keyboard=self.keyboard_delay.get_keyboard(),
-                                    random_id=get_random_id()
-                                )
-                                return 0
-
                             if Bot.availability_check(event.user_id, user_name, int(Bot.str_trim(event.text))):
                                 self._add_id_to_file_(int(Bot.str_trim(event.text)))
                                 self.Lsvk.messages.send(
@@ -233,7 +224,7 @@ class Bot:
                     else:
                         self.Lsvk.messages.send(
                             user_id=event.user_id,
-                            message='Отсрочки на это дз уже недоступны. Введите другой номер дз.',
+                            message='Отсрочки на это дз уже недоступны. Введите другой номер.',
                             keyboard=self.keyboard_hw_available.get_keyboard(),
                             random_id=get_random_id()
                         )
@@ -272,6 +263,8 @@ class Bot:
                     hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line) - 2])),
                                   bool(int(line[len(line) - 1])))
                     self.database_hw.add(hw)
+                    f = open("hw_" + str(hw.num) + ".txt", 'a')
+                    f.close()
                     self._message_success()
                     self.database_hw.save(self.database_hw_filename)
                     self.database_hw.deactivate_past()
@@ -284,13 +277,23 @@ class Bot:
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.user_id == self.user:
                 if Bot.str_trim(event.text) == 'все':
+                    #delete all files
+                    for h in self.database_hw.get_database():
+                        filename = "hw_ " + str(h) + ".txt"
+                        if os.path.exists(filename):
+                            os.remove(filename)
                     self.database_hw.delete_all()
                     self._message_success()
                     self.database_hw.save(self.database_hw_filename)
+                    return
 
                 elif re.match("\\s*\\d?\\d\\s*", event.text):
                     num = str.strip(event.text)
                     if self.database_hw.delete_by_num(int(num)):
+                        #delete hw file
+                        filename = "hw_ " + str(num) + ".txt"
+                        if os.path.exists(filename):
+                            os.remove(filename)
                         self._message_success()
                         self.database_hw.save(self.database_hw_filename)
                         self.database_hw.deactivate_past()

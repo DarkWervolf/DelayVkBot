@@ -21,11 +21,14 @@ class HWdatabase:
         return False
 
     def read(self, filename: str):
-        with open(filename, 'r') as f:
-            hw_all_str = f.readlines()
-        for line in hw_all_str:
-            hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
-            self.add(hw)
+        try:
+            with open(filename, 'r') as f:
+                hw_all_str = f.readlines()
+            for line in hw_all_str:
+                hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
+                self.add(hw)
+        except:
+            pass
 
     def get_database(self):
         all = []
