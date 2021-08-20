@@ -3,7 +3,7 @@ import time
 
 from Bot import *
 
-token = 'b592ffd312091f724d2fc6f3d77e08a726f743ab7e721b92a403f53e85c5626d020bdf9e9a7a0ab8d64ea'
+token = 'token'
 users = []
 
 
@@ -25,13 +25,13 @@ def main():
         Lsvk = vk_session.get_api()
         for event in Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user:
-                if event.text == 'Справка':
+                if Bot.str_trim(event.text) == 'справка':
                     Lsvk.messages.send(
                         user_id=event.user_id,
                         message='Отсрочка - это персональный сдвиг дедлайна на 5 дней без изменения времени.\nВсего на курс у вас есть 10 отсрочек.\nПопросить отсрочку можно в данном боте, внимательно следуя инструкциям.\nНе советуем играть с ботом - он может и мизинец отхватить.\nПо всем техническим вопросам, касающихся бота, можете писать в учебную беседу курса',
                         random_id=get_random_id()
                     )
-                elif event.text == 'Завершить' and event.user_id not in users:
+                elif Bot.str_trim(event.text) == 'завершить' and event.user_id not in users:
                     Lsvk.messages.send(
                         user_id=event.user_id,
                         message='Но я же...\nНичего не делал...',

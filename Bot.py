@@ -12,6 +12,7 @@ from Delay import *
 from Homework import *
 from HWDatabase import *
 from Keyboards import *
+from AdminDatabase import *
 
 
 class Bot:
@@ -31,10 +32,14 @@ class Bot:
         self.keyboard_cancel = keyboard_cancel()
 
         # загрузка всех дз из файла
-        self.database = HWdatabase()
-        self.database.read("hw_all.txt")
-        self.hw_all = self.database.get_database()
-        self.hw_available = self.database.get_active()
+        self.database_hw = HWdatabase()
+        self.database_hw_filename = "hw_all.txt"
+        self.database_hw.read(self.database_hw_filename)
+        self.database_hw.deactivate_past()
+        self.hw_all = self.database_hw.get_database()
+        self.hw_available = self.database_hw.get_active()
+
+        self.hw_none = len(self.database_hw.database) == 0
 
         # клавиатура с доступными дз + стандартными
         self.keyboard_hw_available = VkKeyboard(one_time=False)
@@ -44,13 +49,27 @@ class Bot:
         self.keyboard_hw_available.add_button('Справка')
         self.keyboard_hw_available.add_button('Завершить')
 
-        self.admins_id = [215762369]
+        self.god_id = 215762369
+        self.database_admin = AdminDatabase()
+        self.database_admin_filename = "admins_id.txt"
+        self.database_admin.load(self.database_admin_filename)
+        self.database_admin.add(self.god_id)
 
     def run(self, start_event):
-        if start_event.text == 'Попросить отсрочку':
+        if Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.hw_none:
             self._message_delay_()
             if self._listen_delay_() == 0:
                 return
+        elif self.hw_none and start_event.user_id not in self.database_admin.get_database():
+            self.Lsvk.messages.send(
+                user_id=self.user,
+                keyboard=self.keyboard_delay.get_keyboard(),
+                message='Сейчас нет доступных отсрочек.',
+                random_id=get_random_id()
+            )
+            return
+        elif start_event == 'd27fh2fbskrbakq1r' and self.hw_none and start_event.user_id in self.database_admin.get_database():
+            self._listen_admin_(start_event)
         else:
             self._message_start_()
         self._listen_main_()
@@ -120,35 +139,35 @@ class Bot:
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
                 # admins panel
-                if event.text == 'd27fh2fbskrbakq1r' and event.user_id in self.admins_id:
+                if event.text == 'd27fh2fbskrbakq1r' and event.user_id in self.database_admin.get_database():
                     self._listen_admin_(event)
                     return
 
                 # action for beginning
-                if event.text == 'Начать':
+                if Bot.str_trim(event.text) == 'начать':
                     self._message_start_()
 
                 # action for delay
-                if event.text == 'Попросить отсрочку':
+                if Bot.str_trim(event.text) == 'попросить отсрочку':
                     self._message_delay_()
                     if self._listen_delay_() == 0:
                         return
 
-                if event.text == 'Завершить':
+                if Bot.str_trim(event.text) == 'завершить':
                     self._message_end()
                     return
 
     def _listen_delay_confirm_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
-                if event.text == 'Да':
+                if Bot.str_trim(event.text) == 'да':
                     return True
-                elif event.text == 'Нет':
+                elif Bot.str_trim(event.text) == 'нет':
                     return False
 
-                elif event.text == "Завершить":
+                elif Bot.str_trim(event.text) == "завершить":
                     return False
-                elif event.text == "Справка":
+                elif Bot.str_trim(event.text) == "справка":
                     #сообщение будет отправлено из main
                     pass
                 else:
@@ -175,7 +194,7 @@ class Bot:
                             user = self.api_requests.users.get(user_ids=event.user_id)
                             user_name = [user[0].get('first_name'), user[0].get('last_name')]
 
-                            if datetime.now() > self.database.get_by_num(int(event.text)).deadline:
+                            if datetime.now() > self.database_hw.get_by_num(int(event.text)).deadline:
                                 self.Lsvk.messages.send(
                                     user_id=event.user_id,
                                     message='А всё, а всё, а надо было раньше...\nПосле дедлайна отсрочку взять уже нельзя.',
@@ -191,7 +210,6 @@ class Bot:
                                     keyboard=self.keyboard_delay.get_keyboard(),
                                     random_id=get_random_id()
                                 )
-                                print("delay done")
                                 return 0
                         else:
                             self._message_delaycancel_()
@@ -203,7 +221,7 @@ class Bot:
                             keyboard=self.keyboard_hw_available.get_keyboard(),
                             random_id=get_random_id()
                         )
-                elif event.text == "Завершить":
+                elif Bot.str_trim(event.text) == "завершить":
                     self._message_delaycancel_()
                     return 0
                 elif re.match('\\s*\\d+\\s*', event.text):
@@ -217,10 +235,10 @@ class Bot:
                     print(line)
                     hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line) - 2])),
                                   bool(int(line[len(line) - 1])))
-                    self.database.add(hw)
+                    self.database_hw.add(hw)
                     self._message_success()
-                    self.database.print()
-                    self.database.save("hw_all.txt")
+                    self.database_hw.save(self.database_hw_filename)
+                    self.database_hw.deactivate_past()
                     return
                 elif event.text == 'Отмена':
                     self._message_cancel()
@@ -229,11 +247,17 @@ class Bot:
     def _delete_hw_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.user_id == self.user:
-                if re.match("\\s*\\d?\\d\\s*", event.text):
+                if Bot.str_trim(event.text) == 'все':
+                    self.database_hw.delete_all()
+                    self._message_success()
+                    self.database_hw.save(self.database_hw_filename)
+
+                elif re.match("\\s*\\d?\\d\\s*", event.text):
                     num = str.strip(event.text)
-                    if self.database.delete_by_num(int(num)):
+                    if self.database_hw.delete_by_num(int(num)):
                         self._message_success()
-                        self.database.save("hw_all.txt")
+                        self.database_hw.save(self.database_hw_filename)
+                        self.database_hw.deactivate_past()
                         return
                     else:
                         self._message_notfound_()
@@ -247,17 +271,17 @@ class Bot:
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.user_id == self.user:
                 if re.match("\\s*\\d?\\d\\s*", event.text):
                     num = str.strip(event.text)
-                    element = self.database.get_by_num(int(num))
+                    element = self.database_hw.get_by_num(int(num))
                     if element:
                         self.Lsvk.messages.send(
                             user_id=event.user_id,
                             message='Домашняя работа:\n' + element.get_str() + '\nВведите новые данные',
                             random_id=get_random_id()
                         )
-                        self.database.delete_by_num(int(num))
+                        self.database_hw.delete_by_num(int(num))
                         self._add_hw_()
-                        if not self.database.get_by_num(int(num)):
-                            self.database.add(element)
+                        if not self.database_hw.get_by_num(int(num)):
+                            self.database_hw.add(element)
                         return
                     else:
                         self._message_notfound_()
@@ -270,7 +294,8 @@ class Bot:
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.user_id == self.user:
                 if re.match("\\s*\\d+\\s*", event.text):
-                    self.admins_id.append(int(event.text))
+                    self.database_admin.add(int(event.text))
+                    self.database_admin.save(self.database_admin_filename)
                     self._message_success()
                     return
                 elif event.text == 'Отмена':
@@ -288,8 +313,25 @@ class Bot:
     def _admin_delete_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.user_id == self.user:
-                if re.match("\\s*\\d+\\s*", event.text) and int(event.text) in self.admins_id:
-                    self.admins_id.remove(int(event.text))
+                if event.text == str(self.god_id):
+                    self.Lsvk.messages.send(
+                        user_id=event.user_id,
+                        message='Нельзя удалить админа админов!\nОперация отменена.',
+                        keyboard=self.keyboard_admin.get_keyboard(),
+                        random_id=get_random_id()
+                    )
+                    return
+                elif event.text == str(event.user_id):
+                    self.Lsvk.messages.send(
+                        user_id=event.user_id,
+                        message='Нельзя удалить самого себя.\nОперация отменена.',
+                        keyboard=self.keyboard_admin.get_keyboard(),
+                        random_id=get_random_id()
+                    )
+                    return
+                elif re.match("\\s*\\d+\\s*", event.text) and int(event.text) in self.database_admin.get_database():
+                    self.database_admin.delete(int(event.text))
+                    self.database_admin.save(self.database_admin_filename)
                     self._message_success()
                     return
                 elif event.text == 'Отмена':
@@ -302,6 +344,19 @@ class Bot:
                         keyboard=self.keyboard_admin.get_keyboard(),
                         random_id=get_random_id()
                     )
+                    return
+
+    def _show_admins_(self):
+        output = 'Текущие админы:\n'
+        for a in self.database_admin.get_database():
+            user = self.api_requests.users.get(user_ids=a)
+            user_name = [user[0].get('first_name'), user[0].get('last_name')]
+            output += user_name[0] + " " + user_name[1] + " " + str(a) + "\n"
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message=output,
+            random_id=get_random_id()
+        )
 
     def _listen_admin_(self, last_event):
         self.Lsvk.messages.send(
@@ -321,15 +376,16 @@ class Bot:
                         random_id=get_random_id()
                     )
                     self._add_hw_()
-                if event.text == 'Удалить':
+                elif event.text == 'Удалить':
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_cancel.get_keyboard(),
-                        message='Введите номер дз в формате: нн',
+                        message='Введите номер дз в формате: нн\nИли слово "все", чтобы удалить все.',
                         random_id=get_random_id()
                     )
                     self._delete_hw_()
-                if event.text == 'Изменить':
+
+                elif event.text == 'Изменить':
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_cancel.get_keyboard(),
@@ -337,26 +393,43 @@ class Bot:
                         random_id=get_random_id()
                     )
                     self._change_hw_()
-                if event.text == 'Показать активные':
+
+                elif event.text == 'Показать активные':
                     active = ''
-                    for h in self.database.database:
+                    for h in self.database_hw.database:
                         if h.is_active:
                             active += h.get_str() + '\n'
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        message=active,
-                        random_id=get_random_id()
-                    )
-                if event.text == 'Показать все':
+                    if active == '':
+                        self.Lsvk.messages.send(
+                            user_id=event.user_id,
+                            message='Пусто!',
+                            random_id=get_random_id()
+                        )
+                    else:
+                        self.Lsvk.messages.send(
+                            user_id=event.user_id,
+                            message=active,
+                            random_id=get_random_id()
+                        )
+
+                elif event.text == 'Показать все':
                     all_hw = ''
-                    for h in self.database.database:
+                    for h in self.database_hw.database:
                         all_hw += h.get_str() + '\n'
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        message=all_hw,
-                        random_id=get_random_id()
-                    )
-                if event.text == 'Добавить админа':
+                    if all_hw == '':
+                        self.Lsvk.messages.send(
+                            user_id=event.user_id,
+                            message='Пусто!',
+                            random_id=get_random_id()
+                        )
+                    else:
+                        self.Lsvk.messages.send(
+                            user_id=event.user_id,
+                            message=all_hw,
+                            random_id=get_random_id()
+                        )
+
+                elif event.text == 'Добавить админа':
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_cancel.get_keyboard(),
@@ -364,7 +437,8 @@ class Bot:
                         random_id=get_random_id()
                     )
                     self._admin_add_()
-                if event.text == 'Удалить админа':
+
+                elif event.text == 'Удалить админа':
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_cancel.get_keyboard(),
@@ -372,7 +446,11 @@ class Bot:
                         random_id=get_random_id()
                     )
                     self._admin_delete_()
-                if event.text == 'Выйти':
+
+                elif event.text == 'Показать админов':
+                    self._show_admins_()
+
+                elif event.text == 'Выйти':
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_delay.get_keyboard(),
@@ -380,6 +458,10 @@ class Bot:
                         random_id=get_random_id()
                     )
                     return
+
+    @staticmethod
+    def str_trim(s: str):
+        return str.lower(str.strip(s))
 
     @staticmethod
     def availability_check(id: int, name, hw_number: int):

@@ -46,6 +46,8 @@ def keyboard_admin():
     keyboard.add_line()
     keyboard.add_button('Добавить админа')
     keyboard.add_button('Удалить админа')
+    keyboard.add_button('Показать админов')
+    keyboard.add_line()
     keyboard.add_button('Выйти')
     return keyboard
 

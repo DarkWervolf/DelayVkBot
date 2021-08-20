@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from Homework import homework
+
 
 class HWdatabase:
     def __init__(self):
@@ -18,7 +21,7 @@ class HWdatabase:
         return False
 
     def read(self, filename: str):
-        with open(filename) as f:
+        with open(filename, 'r') as f:
             hw_all_str = f.readlines()
         for line in hw_all_str:
             hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
@@ -53,3 +56,14 @@ class HWdatabase:
             all += h.get_str() + '\n'
         with open(filename, 'w') as f:
             f.write(all)
+
+    def deactivate_past(self):
+        for h in self.database:
+            if datetime.now() > h.deadline:
+                h.is_active = False
+                temp = h
+                self.delete(h)
+                self.add(temp)
+
+    def delete_all(self):
+        self.database = []
