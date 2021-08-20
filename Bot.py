@@ -48,11 +48,9 @@ class Bot:
 
     def run(self, start_event):
         if start_event.text == 'Попросить отсрочку':
-            print("delay")
             self._message_delay_()
-            self._listen_delay_()
-        elif start_event.text == 'Попросить отсрочку':
-            self._message_help_()
+            if self._listen_delay_() == 0:
+                return
         else:
             self._message_start_()
         self._listen_main_()
@@ -96,12 +94,35 @@ class Bot:
             random_id=get_random_id()
         )
 
+    def _message_end(self):
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message='Рад был помочь!',
+            random_id=get_random_id()
+        )
+
+    def _message_delaycancel_(self):
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message='Операция отменена, мизинец спасён.',
+            keyboard=self.keyboard_delay.get_keyboard(),
+            random_id=get_random_id()
+        )
+
+    def _message_notfound_(self):
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message='Домашнее задание с таким номером не найдено.',
+            random_id=get_random_id()
+        )
+
     def _listen_main_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
                 # admins panel
                 if event.text == 'd27fh2fbskrbakq1r' and event.user_id in self.admins_id:
                     self._listen_admin_(event)
+                    return
 
                 # action for beginning
                 if event.text == 'Начать':
@@ -113,15 +134,8 @@ class Bot:
                     if self._listen_delay_() == 0:
                         return
 
-                if event.text == 'Справка':
-                    self._message_help_()
-
                 if event.text == 'Завершить':
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        message='Рад был помочь!',
-                        random_id=get_random_id()
-                    )
+                    self._message_end()
                     return
 
     def _listen_delay_confirm_(self):
@@ -132,12 +146,11 @@ class Bot:
                 elif event.text == 'Нет':
                     return False
 
-                if event.text == 'Справка':
-                    self._message_help_()
-
                 elif event.text == "Завершить":
-                    self._message_start_()
-                    return
+                    return False
+                elif event.text == "Справка":
+                    #сообщение будет отправлено из main
+                    pass
                 else:
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
@@ -149,7 +162,6 @@ class Bot:
     def _listen_delay_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
-                # action for hw number
                 if event.text in self.hw_all:
                     if event.text in self.hw_available:
                         self.Lsvk.messages.send(
@@ -179,14 +191,10 @@ class Bot:
                                     keyboard=self.keyboard_delay.get_keyboard(),
                                     random_id=get_random_id()
                                 )
+                                print("delay done")
                                 return 0
                         else:
-                            self.Lsvk.messages.send(
-                                user_id=event.user_id,
-                                message='Операция отменена, мизинец спасён.',
-                                keyboard=self.keyboard_delay.get_keyboard(),
-                                random_id=get_random_id()
-                            )
+                            self._message_delaycancel_()
                             return 0
                     else:
                         self.Lsvk.messages.send(
@@ -195,27 +203,11 @@ class Bot:
                             keyboard=self.keyboard_hw_available.get_keyboard(),
                             random_id=get_random_id()
                         )
-                if event.text == 'Справка':
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        message='Справка',
-                        random_id=get_random_id()
-                    )
                 elif event.text == "Завершить":
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        keyboard=self.keyboard_delay.get_keyboard(),
-                        message='Это бот для получения отсрочек по информатике в Школково.\nЧтобы попросить отсрочку, нажми на кнопку ниже.',
-                        random_id=get_random_id()
-                    )
-                    return
-                elif re.match("\\s\\.\\s", event.text):
-                    self.Lsvk.messages.send(
-                        user_id=event.user_id,
-                        message='Некорректная команда. Попробуй ещё раз.',
-                        keyboard=self.keyboard_hw_available.get_keyboard(),
-                        random_id=get_random_id()
-                    )
+                    self._message_delaycancel_()
+                    return 0
+                elif re.match('\\s*\\d+\\s*', event.text):
+                    self._message_notfound_()
 
     def _add_hw_(self):
         for event in self.Lslongpoll.listen():
@@ -244,12 +236,7 @@ class Bot:
                         self.database.save("hw_all.txt")
                         return
                     else:
-                        self.Lsvk.messages.send(
-                            user_id=event.user_id,
-                            message='Дз не найдено',
-                            keyboard=self.keyboard_admin.get_keyboard(),
-                            random_id=get_random_id()
-                        )
+                        self._message_notfound_()
                         return
                 elif event.text == 'Отмена':
                     self._message_cancel()
@@ -271,13 +258,9 @@ class Bot:
                         self._add_hw_()
                         if not self.database.get_by_num(int(num)):
                             self.database.add(element)
+                        return
                     else:
-                        self.Lsvk.messages.send(
-                            user_id=event.user_id,
-                            message='Дз не найдено',
-                            keyboard=self.keyboard_admin.get_keyboard(),
-                            random_id=get_random_id()
-                        )
+                        self._message_notfound_()
                         return
                 elif event.text == 'Отмена':
                     self._message_cancel()
@@ -334,7 +317,7 @@ class Bot:
                     self.Lsvk.messages.send(
                         user_id=event.user_id,
                         keyboard=self.keyboard_cancel.get_keyboard(),
-                        message='Введите номер и дату дедлайна дз в формате:\nнн дд.мм.гг',
+                        message='Введите номер и дату дедлайна дз в формате:\nнн дд.мм.гг а\nГде нн - номер дз,\nдд.мм.гг - дата дедлайна (время выставляется автоматически),\nа - активно дз или нет (0 или 1).',
                         random_id=get_random_id()
                     )
                     self._add_hw_()
