@@ -3,7 +3,7 @@ import time
 
 from Bot import *
 
-token = 'token'
+token = ''
 users = []
 
 

@@ -37,15 +37,20 @@ class Bot:
         self.database_hw.read(self.database_hw_filename)
         self.database_hw.deactivate_past()
         self.hw_all = self.database_hw.get_database()
-        self.hw_available = self.database_hw.get_active()
 
+        self.hw_available = self.database_hw.get_active()
         self.hw_none = len(self.database_hw.database) == 0
+
+        self._get_available_hw_()
+        self.hw_none = len(self.hw_available) == 0
 
         # клавиатура с доступными дз + стандартными
         self.keyboard_hw_available = VkKeyboard(one_time=False)
-        for i in range(len(self.hw_available)):
-            self.keyboard_hw_available.add_button(self.hw_available[i], color=VkKeyboardColor.PRIMARY)
-        self.keyboard_hw_available.add_line()
+        if not self.hw_none:
+            for i in range(len(self.hw_available)):
+                self.keyboard_hw_available.add_button(self.hw_available[i], color=VkKeyboardColor.PRIMARY)
+            self.keyboard_hw_available.add_line()
+
         self.keyboard_hw_available.add_button('Справка')
         self.keyboard_hw_available.add_button('Завершить')
 
@@ -60,16 +65,14 @@ class Bot:
             self._message_delay_()
             if self._listen_delay_() == 0:
                 return
-        elif self.hw_none and start_event.user_id not in self.database_admin.get_database():
-            self.Lsvk.messages.send(
-                user_id=self.user,
-                keyboard=self.keyboard_delay.get_keyboard(),
-                message='Сейчас нет доступных отсрочек.',
-                random_id=get_random_id()
-            )
-            return
-        elif start_event == 'd27fh2fbskrbakq1r' and self.hw_none and start_event.user_id in self.database_admin.get_database():
+
+        elif start_event == 'd27fh2fbskrbakq1r' and start_event.user_id in self.database_admin.get_database():
             self._listen_admin_(start_event)
+
+        elif self.hw_none:
+            self._message_nodelays_()
+            return
+
         else:
             self._message_start_()
         self._listen_main_()
@@ -135,6 +138,13 @@ class Bot:
             random_id=get_random_id()
         )
 
+    def _message_nodelays_(self):
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message='Сейчас нет доступных отсрочек.',
+            random_id=get_random_id()
+        )
+
     def _listen_main_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
@@ -149,9 +159,14 @@ class Bot:
 
                 # action for delay
                 if Bot.str_trim(event.text) == 'попросить отсрочку':
+                    if self.hw_none:
+                        self._message_nodelays_()
+                        return
+
                     self._message_delay_()
                     if self._listen_delay_() == 0:
                         return
+
 
                 if Bot.str_trim(event.text) == 'завершить':
                     self._message_end()
@@ -168,7 +183,7 @@ class Bot:
                 elif Bot.str_trim(event.text) == "завершить":
                     return False
                 elif Bot.str_trim(event.text) == "справка":
-                    #сообщение будет отправлено из main
+                    # сообщение будет отправлено из main
                     pass
                 else:
                     self.Lsvk.messages.send(
@@ -203,7 +218,8 @@ class Bot:
                                 )
                                 return 0
 
-                            if Bot.availability_check(event.user_id, user_name, int(event.text)):
+                            if Bot.availability_check(event.user_id, user_name, int(Bot.str_trim(event.text))):
+                                self._add_id_to_file_(int(Bot.str_trim(event.text)))
                                 self.Lsvk.messages.send(
                                     user_id=event.user_id,
                                     message='Отсрочка выдана!',
@@ -226,6 +242,26 @@ class Bot:
                     return 0
                 elif re.match('\\s*\\d+\\s*', event.text):
                     self._message_notfound_()
+
+    def _add_id_to_file_(self, homework_num: int):
+        filename = "hw_" + str(homework_num) + ".txt"
+        with open(filename, 'a') as file:
+            file.write(str(self.user) + '\n')
+
+    def _get_available_hw_(self):
+        if not self.hw_none:
+            to_remove = []
+            for a in self.hw_available:
+                filename = "hw_" + str(a) + ".txt"
+                try:
+                    with open(filename, 'r') as file:
+                        lines = file.read().splitlines()
+                        if str(self.user) in lines:
+                            to_remove.append(a)
+                except:
+                    pass
+            for i in range(len(to_remove)):
+                self.hw_available.remove(to_remove[i])
 
     def _add_hw_(self):
         for event in self.Lslongpoll.listen():
