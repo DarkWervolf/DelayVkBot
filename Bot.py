@@ -13,10 +13,11 @@ from Homework import *
 from HWDatabase import *
 from Keyboards import *
 from AdminDatabase import *
+from SpreadsheetsWorker import *
 
 
 class Bot:
-    def __init__(self, token, user):
+    def __init__(self, token, user, worker):
         self.user = user
 
         self.token = token
@@ -60,9 +61,15 @@ class Bot:
         self.database_admin.load(self.database_admin_filename)
         self.database_admin.add(self.god_id)
 
+        self.worker = worker
+
     def run(self, start_event):
         if start_event.text == 'd27fh2fbskrbakq1r' and start_event.user_id in self.database_admin.get_database():
             self._listen_admin_(start_event)
+            return
+
+        elif Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.worker.check_postponement_counter(self.user):
+            self._message_no_more_delays_()
             return
 
         elif Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.hw_none:
@@ -146,6 +153,13 @@ class Bot:
             random_id=get_random_id()
         )
 
+    def _message_no_more_delays_(self):
+        self.Lsvk.messages.send(
+            user_id=self.user,
+            message='Вы истратили все свои отсрочки.',
+            random_id=get_random_id()
+        )
+
     def _listen_main_(self):
         for event in self.Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user and event.user_id == self.user:
@@ -160,6 +174,11 @@ class Bot:
 
                 # action for delay
                 if Bot.str_trim(event.text) == 'попросить отсрочку':
+                    # Check postponement counter and cancel if >= 10
+                    if not self.worker.check_postponement_counter(self.user):
+                        self._message_no_more_delays_()
+                        return
+
                     if self.hw_none:
                         self._message_nodelays_()
                         return
@@ -212,6 +231,12 @@ class Bot:
 
                             if Bot.availability_check(event.user_id, user_name, int(Bot.str_trim(event.text))):
                                 self._add_id_to_file_(int(Bot.str_trim(event.text)))
+
+                                # Increase pstmnt cnt and send this to expets
+                                self.worker.increase_postponement_counter(delay(event.user_id, user_name, Bot.str_trim(event.text)))
+                                self.worker.send_postponement_to_experts(delay(event.user_id, user_name, int(Bot.str_trim(event.text))), self.database_hw.get_by_num(int(Bot.str_trim(event.text))))
+
+
                                 self.Lsvk.messages.send(
                                     user_id=event.user_id,
                                     message='Отсрочка выдана!',
