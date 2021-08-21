@@ -63,6 +63,7 @@ class Bot:
     def run(self, start_event):
         if start_event.text == 'd27fh2fbskrbakq1r' and start_event.user_id in self.database_admin.get_database():
             self._listen_admin_(start_event)
+            return
 
         elif Bot.str_trim(start_event.text) == 'попросить отсрочку' and not self.hw_none:
             self._message_delay_()
