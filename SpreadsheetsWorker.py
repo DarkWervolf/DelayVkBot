@@ -29,7 +29,7 @@ class SpreadsheetsWorker:
             f.close()
         except:
             print('Spreadsheets.txt is not in directory')
-            exit()
+            sys.exit()
 
         creds = None
         if os.path.exists('token.json'):
