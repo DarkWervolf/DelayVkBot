@@ -6,29 +6,31 @@ from Homework import homework
 class HWdatabase:
     def __init__(self):
         self.database = []
+        if os.path.exists("hw_all.txt"):
+            self.read("hw_all.txt")
 
     def add(self, hw: homework):
         self.database.append(hw)
+        self.save("hw_all.txt")
 
     def delete(self, hw: homework):
         self.database.remove(hw)
+        self.save("hw_all.txt")
 
     def delete_by_num(self, n: int):
         for h in self.database:
             if h.num == n:
                 self.delete(h)
+                self.save("hw_all.txt")
                 return True
         return False
 
     def read(self, filename: str):
-        try:
-            with open(filename, 'r') as f:
-                hw_all_str = f.readlines()
-            for line in hw_all_str:
-                hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
-                self.add(hw)
-        except:
-            pass
+        with open(filename, 'r') as f:
+            hw_all_str = f.readlines()
+        for line in hw_all_str:
+            hw = homework(int(line[:2]), homework.make_deadline(str.strip(line[2:len(line)-3])), bool(int(line[len(line)-2])))
+            self.database.append(hw)
 
     def get_database(self):
         all = []
