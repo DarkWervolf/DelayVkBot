@@ -333,7 +333,7 @@ class Bot:
                                                'Чтобы попросить отсрочку, нажми на кнопку ниже.',
                                       self.keyboard_delay)
 
-                if time.time() - self.last_spreadsheet_send >= 5:
+                if time.time() - self.last_spreadsheet_send >= 30:
                     print('start sending')
                     postponements = self.postponement_database.get_postponements()
                     postponementsCount = self.postponement_database.get_postponements_count()
