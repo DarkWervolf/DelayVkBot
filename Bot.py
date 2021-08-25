@@ -80,6 +80,7 @@ class Bot:
 
                 self.database_hw.deactivate_past()
                 self.hw_available = self.database_hw.get_active()
+                self.hw_none = len(self.hw_available) == 0
 
                 if text == 'админ' and user_id in self.database_admin.get_database():
                     self.active_users[user_index][1] = states.admin
