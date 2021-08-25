@@ -21,15 +21,10 @@ class SpreadsheetsWorker:
 
         # The ID and range of a needed spreadsheets.
         self.tables = []
-        try:
-            with open('Spreadsheets.txt', 'r') as f:
-                lines = f.readlines()
-            for line in lines:
-                self.tables.append(Table(line.split()[0], line.split()[1]))
-            f.close()
-        except:
-            print('Spreadsheets.txt is not in directory')
-            sys.exit()
+        with open('Spreadsheets.txt', 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            self.tables.append(Table(line.split()[0], line.split()[1]))
 
         creds = None
         if os.path.exists('token.json'):
@@ -46,95 +41,21 @@ class SpreadsheetsWorker:
                 token.write(creds.to_json())
         self.service = build('sheets', 'v4', credentials=creds)
 
-    def check_postponement_counter(self, user_id):
-        vkSrc = 'https://vk.com/id' + str(user_id)
-
-        # Getting values of spreadsheet with counters
-        values = self.service.spreadsheets().values().get(spreadsheetId=self.tables[1].id,
-                                range=self.tables[1].range).execute().get('values', [])
-
-        # Check postponement counter
-        rowNum = -1
-
-        if not values:
-            return False
-        else:
-            for i in range(len(values)):
-                if (values[i][1] == vkSrc):
-                    rowNum = i
-                    break
-        if rowNum == -1 or int(values[rowNum][2]) < 10:
-            return True
-        return False
-
-    def increase_postponement_counter(self, postponement):
-        vkSrc = 'https://vk.com/id' + str(postponement.id)
-
-        # Getting values of spreadsheet with counters
-        values = self.service.spreadsheets().values().get(spreadsheetId=self.tables[1].id,
-                                range=self.tables[1].range).execute().get('values', [])
-
-        # Check postponement counter
-        rowNum = -1
-
-        if not values:
-            return False
-        else:
-            for i in range(len(values)):
-                if (values[i][1] == vkSrc):
-                    rowNum = i
-                    break
-
-        if rowNum == -1:
-            values = [
-                [
-                    postponement.fullname[0] + ' ' + postponement.fullname[1],
-                    vkSrc,
-                    '1'
-                ]
-            ]
-
-            body = {
-                'values': values
-            }
-
-            result = self.service.spreadsheets().values().append(
-                spreadsheetId=self.tables[1].id, range=self.tables[1].range,
-                valueInputOption='USER_ENTERED', body=body).execute()
-            return
-
-        values = [
-            [
-                values[rowNum][0],
-                values[rowNum][1],
-                str(int(values[rowNum][2]) + 1)
-            ]
-        ]
-
+    def send_postponement_count(self, postponementsCount):
         body = {
-            'values': values
+            'values': postponementsCount
         }
 
         result = self.service.spreadsheets().values().update(
-            spreadsheetId=self.tables[1].id, range='A' + str(rowNum + 2) + ':C',
+            spreadsheetId=self.tables[1].id, range=self.tables[1].range,
             valueInputOption='USER_ENTERED', body=body).execute()
         return
 
-    def send_postponement_to_experts(self, postponement, hw):
-        vkSrc = 'https://vk.com/id'+ str(postponement.id)
-
-        values = [
-            [
-                datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                postponement.fullname[0] + ' ' + postponement.fullname[1],
-                vkSrc,
-                'ДЗ ' + str(postponement.hw),
-                hw.deadline.strftime('%d.%m.%Y')
-            ]
-        ]
-
+    def send_postponement_to_experts(self, postponements):
+        for p in postponements:
+            p[4] = p[4].split()[0]
         body = {
-            'values': values
+            'values': postponements
         }
 
         result = self.service.spreadsheets().values().append(

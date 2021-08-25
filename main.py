@@ -4,26 +4,9 @@ import time
 from Bot import *
 
 token = 'b592ffd312091f724d2fc6f3d77e08a726f743ab7e721b92a403f53e85c5626d020bdf9e9a7a0ab8d64ea'
-users = []
+maxPostmentsCnt = 10
 
-
-def new_bot_instance(user, start_event, worker):
-    if start_event.text == 'Завершить':
-        users.remove(user)
-        return
-    print('-----------------BEGIN THREAD ' + str(threading.get_ident()) +'-----------------')
-    bot = Bot(token, user, worker)
-    bot.run(start_event)
-    users.remove(user)
-    print('-----------------END THREAD ' + str(threading.get_ident()) +'-----------------')
-
-
-def main():
-    while True:
-        vk_session = vk_api.VkApi(token=token)
-        Lslongpoll = VkLongPoll(vk_session)
-        Lsvk = vk_session.get_api()
-        worker = SpreadsheetsWorker()
+'''def main():
         for event in Lslongpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.text and event.from_user:
                 if Bot.str_trim(event.text) == 'справка':
@@ -41,8 +24,13 @@ def main():
                 elif event.user_id not in users:
                     users.append(event.user_id)
                     thread = threading.Thread(target=new_bot_instance, args=(users[len(users)-1], event, worker, ))
-                    thread.start()
-
+                    thread.start()'''
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            bot = Bot(token, maxPostmentsCnt)
+            bot.run()
+        except Exception as ex:
+            print(ex)
+            pass
