@@ -8,10 +8,10 @@ class PostponementsDatabase:
         self.postponements = []
         self.postponementsCount = []
 
-        if os.path.exists("postponements.txt"):
-            self.readPostponements("postponements.txt")
-        if os.path.exists("postponementsCount.txt"):
-            self.readPostponementsCount("postponementsCount.txt")
+        if os.path.exists(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "postponements.txt"):
+            self.readPostponements(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "postponements.txt")
+        if os.path.exists(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "postponementsCount.txt"):
+            self.readPostponementsCount(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "postponementsCount.txt")
 
     def add(self, postponement: delay):
         VkSrc = 'https://vk.com/id' + str(postponement.id)
@@ -83,11 +83,11 @@ class PostponementsDatabase:
         all = ''
         for p in self.postponements:
             all += str(p[0]) + ' ' + str(p[1]) + ' ' + str(p[2]) + ' ' + str(p[3]) + ' ' + str(p[4]) + '\n'
-        with open('postponements.txt', 'w') as f:
+        with open(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + 'postponements.txt', 'w') as f:
             f.write(all)
 
         all = ''
         for p in self.postponementsCount:
             all += str(p[0]) + ' ' + str(p[1]) + ' ' + str(p[2]) + '\n'
-        with open('postponementsCount.txt', 'w') as f:
+        with open(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + 'postponementsCount.txt', 'w') as f:
             f.write(all)

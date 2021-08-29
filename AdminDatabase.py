@@ -3,19 +3,19 @@ import os.path
 class AdminDatabase:
     def __init__(self):
         self.admins_id = []
-        if os.path.exists("admins_id.txt"):
-            self.load("admins_id.txt")
+        if os.path.exists(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "admins_id.txt"):
+            self.load(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "admins_id.txt")
 
     def get_database(self):
         return self.admins_id
 
     def add(self, new_admin: int):
         self.admins_id.append(new_admin)
-        self.save("admins_id.txt")
+        self.save(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "admins_id.txt")
 
     def delete(self, admin_id: int):
         self.admins_id.remove(admin_id)
-        self.save("admins_id.txt")
+        self.save(os.path.realpath(__file__)[:os.path.realpath(__file__).rfind("\\") + 1] + "admins_id.txt")
 
     def save(self, filename: str):
         output = ''
